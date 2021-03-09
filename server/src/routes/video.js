@@ -12,8 +12,24 @@ function getVideoRoutes() {
   return router;
 }
 
+// count views on videos
+async function getVideoViews(videos) {
+  for (const video of videos) {
+    const views = await prisma.view.count({
+      where: {
+        videoId: {
+          equals: video.id,
+        },
+      },
+    });
+    video.views = views;
+  }
+
+  return videos;
+}
+
 async function getRecommendedVideos(req, res) {
-  const videos = await prisma.video.findMany({
+  let videos = await prisma.video.findMany({
     include: {
       user: true,
     },
@@ -22,9 +38,12 @@ async function getRecommendedVideos(req, res) {
     },
   });
 
+  // if we dont have any video, we wont generate a views for this
   if (!videos.lenght) {
     return res.status(200).json({ videos });
   }
+
+  videos = await getVideoViews(videos);
 
   res.status(200).json({ videos });
 }
