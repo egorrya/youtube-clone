@@ -8,6 +8,7 @@ function getVideoRoutes() {
 
   // ./api/v1/videos
   router.get("/", getRecommendedVideos);
+  router.get("/trending", getTrendingVideos);
 
   return router;
 }
@@ -48,7 +49,27 @@ async function getRecommendedVideos(req, res) {
   res.status(200).json({ videos });
 }
 
-async function getTrendingVideos(req, res) {}
+async function getTrendingVideos(req, res) {
+  let videos = await prisma.video.findMany({
+    include: {
+      user: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  // if we dont have any video, we wont generate a views for this
+  if (!videos.lenght) {
+    return res.status(200).json({ videos });
+  }
+
+  videos = await getVideoViews(videos);
+  // js descending order where videos with the most views go first
+  videos.sort((a, b) => b.views - a.views);
+
+  res.status(200).json({ videos });
+}
 
 async function searchVideos(req, res, next) {}
 
