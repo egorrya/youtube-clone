@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
+import { protect } from "../middleware/authorization";
 
 const prisma = new PrismaClient();
 
@@ -9,7 +10,9 @@ function getVideoRoutes() {
   // ./api/v1/videos
   router.get("/", getRecommendedVideos);
   router.get("/trending", getTrendingVideos);
-  router.get("/search/", searchVideos);
+  router.get("/search", searchVideos);
+
+  router.post("/", protect, addVideo);
 
   return router;
 }
@@ -109,7 +112,25 @@ async function searchVideos(req, res, next) {
   res.status(200).json({ videos });
 }
 
-async function addVideo(req, res) {}
+async function addVideo(req, res) {
+  const { title, description, url, thumbnail } = req.body;
+
+  const video = await prisma.video.create({
+    data: {
+      title,
+      description,
+      url,
+      thumbnail,
+      user: {
+        connect: {
+          id: req.user.id,
+        },
+      },
+    },
+  });
+
+  res.status(200).json({ video });
+}
 
 async function addComment(req, res, next) {}
 
