@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
-import { protect } from "../middleware/authorization";
+import { getAuthUser, protect } from "../middleware/authorization";
 
 const prisma = new PrismaClient();
 
@@ -13,6 +13,7 @@ function getVideoRoutes() {
   router.get("/search", searchVideos);
 
   router.post("/", protect, addVideo);
+  router.get("/:videoId/view", getAuthUser, addVideoView);
   router.post("/:videoId/comment", protect, addComment);
   router.delete("/:videoId/comment/:commentId", protect, deleteComment);
 
@@ -192,7 +193,49 @@ async function deleteComment(req, res) {
   res.status(200).json({ json });
 }
 
-async function addVideoView(req, res, next) {}
+async function addVideoView(req, res, next) {
+  const video = await prisma.video.findUnique({
+    where: {
+      id: req.params.videoId,
+    },
+  });
+
+  if (!video) {
+    return next({
+      message: `No video found with id: "${req.params.videoId}"`,
+      statusCode: 404,
+    });
+  }
+
+  if (req.user) {
+    await prisma.view.create({
+      data: {
+        video: {
+          connect: {
+            id: req.params.videoId,
+          },
+        },
+        user: {
+          connect: {
+            id: req.user.id,
+          },
+        },
+      },
+    });
+  } else {
+    await prisma.view.create({
+      data: {
+        video: {
+          connect: {
+            id: req.params.videoId,
+          },
+        },
+      },
+    });
+  }
+
+  res.status(200).json({});
+}
 
 async function likeVideo(req, res, next) {}
 
