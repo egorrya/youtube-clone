@@ -10,12 +10,21 @@ function getUserRoutes() {
 
   // ./api/v1/users
   router.get("/liked-videos", protect, getLikedVideos);
+  router.get("/history", protect, getHistory);
 
   return router;
 }
 
 async function getLikedVideos(req, res, next) {
-  const videoLikes = await prisma.videoLike.findMany({
+  await getVideos(prisma.videoLike, req, res);
+}
+
+async function getHistory(req, res, next) {
+  await getVideos(prisma.view, req, res);
+}
+
+async function getVideos(model, req, res) {
+  const videoRelations = await model.findMany({
     where: {
       userId: req.user.id,
     },
@@ -24,7 +33,7 @@ async function getLikedVideos(req, res, next) {
     },
   });
 
-  const videoIds = videoLikes.map((videoLike) => videoLike.videoId);
+  const videoIds = videoRelations.map((videoLike) => videoLike.videoId);
 
   let videos = await prisma.video.findMany({
     where: {
@@ -45,8 +54,6 @@ async function getLikedVideos(req, res, next) {
 
   res.status(200).json({ videos });
 }
-
-async function getHistory(req, res, next) {}
 
 async function toggleSubscribe(req, res, next) {}
 
